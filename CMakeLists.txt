@@ -507,10 +507,10 @@ set(PNG_EXECUTABLES OFF CACHE BOOL "" FORCE)
 set(PNG_TESTS OFF CACHE BOOL "" FORCE)
 set(PNG_BUILD_ZLIB ON CACHE BOOL "" FORCE)
 set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
+set(ZLIB_INCLUDE_DIRS ${THIRDPARTY_DIR}/zlib CACHE STRING "" FORCE)
 add_subdirectory(${THIRDPARTY_DIR}/libpng)
 
 target_include_directories(png_static 
-    PRIVATE ${THIRDPARTY_DIR}/zlib
     INTERFACE ${THIRDPARTY_DIR}/libpng ${CMAKE_CURRENT_BINARY_DIR}/vendor/libpng)
 
 ################################
