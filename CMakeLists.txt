@@ -507,7 +507,7 @@ set(PNG_EXECUTABLES OFF CACHE BOOL "" FORCE)
 set(PNG_TESTS OFF CACHE BOOL "" FORCE)
 set(PNG_BUILD_ZLIB ON CACHE BOOL "" FORCE)
 set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
-set(ZLIB_INCLUDE_DIRS ${THIRDPARTY_DIR}/zlib CACHE STRING "" FORCE)
+include_directories(${THIRDPARTY_DIR}/zlib)
 add_subdirectory(${THIRDPARTY_DIR}/libpng)
 
 target_include_directories(png_static 
