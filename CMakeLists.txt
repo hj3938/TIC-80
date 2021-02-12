@@ -498,6 +498,22 @@ target_include_directories(zlib INTERFACE ${DEVKITPRO}/portlibs/3ds/include)
 endif ()
 
 ################################
+# PNG
+################################
+
+set(PNG_SHARED OFF CACHE BOOL "" FORCE)
+set(PNG_STATIC ON CACHE BOOL "" FORCE)
+set(PNG_EXECUTABLES OFF CACHE BOOL "" FORCE)
+set(PNG_TESTS OFF CACHE BOOL "" FORCE)
+set(PNG_BUILD_ZLIB ON CACHE BOOL "" FORCE)
+set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
+add_subdirectory(${THIRDPARTY_DIR}/libpng)
+
+target_include_directories(png_static 
+    PRIVATE ${THIRDPARTY_DIR}/zlib
+    INTERFACE ${THIRDPARTY_DIR}/libpng ${CMAKE_CURRENT_BINARY_DIR}/vendor/libpng)
+
+################################
 # ZIP
 ################################
 
@@ -649,7 +665,7 @@ endif()
 
 target_include_directories(tic80studio PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
-target_link_libraries(tic80studio tic80core zip wave_writer argparse)
+target_link_libraries(tic80studio tic80core zip wave_writer argparse png_static)
 
 if(USE_CURL)
     target_link_libraries(tic80studio libcurl)
