@@ -284,7 +284,7 @@ set(TIC80CORE_SRC
     ${TIC80CORE_DIR}/api/lua.c 
     ${TIC80CORE_DIR}/api/wren.c 
     ${TIC80CORE_DIR}/api/squirrel.c
-    ${TIC80CORE_DIR}/ext/gif.c     
+    ${TIC80CORE_DIR}/ext/gif.c
     ${TIC80CORE_DIR}/tic.c
     ${TIC80CORE_DIR}/cart.c
     ${TIC80CORE_DIR}/tools.c 
@@ -498,7 +498,7 @@ target_include_directories(zlib INTERFACE ${DEVKITPRO}/portlibs/3ds/include)
 endif ()
 
 ################################
-# PNG
+# LIBPNG
 ################################
 
 set(PNG_SHARED OFF CACHE BOOL "" FORCE)
@@ -507,7 +507,6 @@ set(PNG_EXECUTABLES OFF CACHE BOOL "" FORCE)
 set(PNG_TESTS OFF CACHE BOOL "" FORCE)
 set(PNG_BUILD_ZLIB ON CACHE BOOL "" FORCE)
 set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
-include_directories(${THIRDPARTY_DIR}/zlib)
 add_subdirectory(${THIRDPARTY_DIR}/libpng)
 
 target_include_directories(png_static 
@@ -628,6 +627,17 @@ if(USE_LIBUV)
 endif()
 
 ################################
+# PNG
+################################
+
+add_library(png STATIC ${CMAKE_SOURCE_DIR}/src/ext/png.c)
+target_include_directories(png 
+    PRIVATE ${CMAKE_SOURCE_DIR}/include
+    INTERFACE ${CMAKE_SOURCE_DIR}/src/ext)
+
+target_link_libraries(png png_static)
+
+################################
 # TIC-80 studio
 ################################
 
@@ -651,7 +661,6 @@ set(TIC80STUDIO_SRC
     ${TIC80LIB_DIR}/studio/fs.c
     ${TIC80LIB_DIR}/studio/net.c
     ${TIC80LIB_DIR}/ext/md5.c
-    ${TIC80LIB_DIR}/ext/gif.c
     ${TIC80LIB_DIR}/ext/history.c
 )
 
@@ -665,7 +674,7 @@ endif()
 
 target_include_directories(tic80studio PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
-target_link_libraries(tic80studio tic80core zip wave_writer argparse png_static)
+target_link_libraries(tic80studio tic80core zip wave_writer argparse png)
 
 if(USE_CURL)
     target_link_libraries(tic80studio libcurl)

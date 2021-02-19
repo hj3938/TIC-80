@@ -1451,7 +1451,7 @@ static void stopVideoRecord(const char* name)
         {
             s32 size = 0;
             u8* data = malloc(FRAME_SIZE * impl.video.frame);
-            int i = 0;
+            s32 i = 0;
             char filename[TICNAME_MAX];
 
             gif_write_animation(data, &size, TIC80_FULLWIDTH, TIC80_FULLHEIGHT, (const u8*)impl.video.buffer, impl.video.frame, TIC80_FRAMERATE, getConfig()->gifScale);
@@ -1860,7 +1860,7 @@ static void initKeymap()
 
 static void processMouseStates()
 {
-    for(int i = 0; i < COUNT_OF(impl.mouse.state); i++)
+    for(s32 i = 0; i < COUNT_OF(impl.mouse.state); i++)
         impl.mouse.state[i].click = false;
 
     tic_mem* tic = impl.studio.tic;
@@ -1868,7 +1868,7 @@ static void processMouseStates()
     tic->ram.vram.vars.cursor.sprite = tic_cursor_arrow;
     tic->ram.vram.vars.cursor.system = true;
 
-    for(int i = 0; i < COUNT_OF(impl.mouse.state); i++)
+    for(s32 i = 0; i < COUNT_OF(impl.mouse.state); i++)
     {
         MouseState* state = &impl.mouse.state[i];
 
@@ -2037,22 +2037,7 @@ static StartArgs parseArgs(s32 argc, const char **argv)
     return args;
 }
 
-#include <png.h>
-
-typedef struct
-{
-    u8* data;
-    s32 size;
-    s32 pos;
-} PngStream;
-
-static void ReadDataFromInputStream(png_structp png_ptr, png_bytep outBytes,
-    png_size_t byteCountToRead)
-{
-    PngStream* stream = png_get_io_ptr(png_ptr);
-    memcpy(outBytes, stream->data + stream->pos, byteCountToRead);
-    stream->pos += byteCountToRead;
-}
+#include "png.h"
 
 Studio* studioInit(s32 argc, const char **argv, s32 samplerate, const char* folder)
 {
@@ -2061,56 +2046,15 @@ Studio* studioInit(s32 argc, const char **argv, s32 samplerate, const char* fold
 
     if (data)
     {
-        if (png_sig_cmp(data, 0, 8) == 0)
-        {
-            png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-            png_infop info_ptr = png_create_info_struct(png_ptr);
+        png_img png = png_read((png_buffer) {data, size});
+        png_buffer out = png_write(png);
+        
+        fs_write("out.png", out.data, (s32)out.size);
 
-            PngStream stream = {.data = data, .size = size};
-
-            png_set_read_fn(png_ptr, &stream, ReadDataFromInputStream);
-            png_read_info(png_ptr, info_ptr);
-
-            png_uint_32 width = 0;
-            png_uint_32 height = 0;
-            s32 bitDepth = 0;
-            s32 colorType = -1;
-
-            png_uint_32 retval = png_get_IHDR(png_ptr, info_ptr,
-                &width,
-                &height,
-                &bitDepth,
-                &colorType,
-                NULL, NULL, NULL);
-
-            if (retval != 1)
-            {
-                printf("error occured\n");
-            }
-
-
-            if (colorType == PNG_COLOR_TYPE_PALETTE)
-            {
-                png_uint_32 bytesPerRow = png_get_rowbytes(png_ptr, info_ptr);
-                u8* rowData = malloc(bytesPerRow);
-
-                for (s32 y = 0; y < height; y++)
-                {
-                    png_read_row(png_ptr, (png_bytep)rowData, NULL);
-                }
-
-                free(rowData);
-            }
-
-            png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-
-        }
-        else printf("invalid sig\n");
-
+        free(out.data);
+        free(png.data);
         free(data);
     }
-
-    return NULL;
 
     setbuf(stdout, NULL);
 
