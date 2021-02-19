@@ -27,7 +27,7 @@
 typedef struct
 {
     u8* data;
-    size_t size;
+    u32 size;
 } png_buffer;
 
 typedef struct

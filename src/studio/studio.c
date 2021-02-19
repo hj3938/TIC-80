@@ -2039,22 +2039,134 @@ static StartArgs parseArgs(s32 argc, const char **argv)
 
 #include "png.h"
 
-Studio* studioInit(s32 argc, const char **argv, s32 samplerate, const char* folder)
+static void encodeCart()
 {
-    s32 size;
-    u8* data = fs_read("cover.png", &size);
+    png_buffer file;
+    file.data = fs_read("cover.png", &file.size);
 
-    if (data)
+    if (file.data)
     {
-        png_img png = png_read((png_buffer) {data, size});
+        png_img png = png_read(file);
+
+        png_buffer enc;
+        {
+            s32 size;
+            u8* cart = fs_read("cart.tic", &size);
+
+            if (cart)
+            {
+                png_buffer zip;
+                zip.data = malloc(size);
+                zip.size = tic_tool_zip(zip.data, size, cart, size);
+
+                // encode size
+                {
+                    enum {Size = sizeof zip.size};
+                    enc.size = zip.size + Size;
+                    enc.data = malloc(enc.size);
+                    memcpy(enc.data, &zip.size, Size);
+                    memcpy(enc.data + Size, zip.data, zip.size);
+                }
+
+                free(zip.data);
+                free(cart);
+            }
+        }
+        {
+            for (s32 i = 0, j = 0; i < png.width * png.height; i++)
+            {
+                if (i > enc.size) break;
+
+                u32 c = png.data[i];
+
+                u8 a = (c & 0xff000000) >> 24;
+                u8 b = (c & 0x00ff0000) >> 16;
+                u8 g = (c & 0x0000ff00) >> 8;
+                u8 r = (c & 0x000000ff) >> 0;
+
+                enum {Shift = 2, Mask = (0xffffffff >> Shift) << Shift};
+
+                a &= Mask;
+                r &= Mask;
+                g &= Mask;
+                b &= Mask;
+
+                a |= tic_tool_peek2(enc.data, j++);
+                b |= tic_tool_peek2(enc.data, j++);
+                g |= tic_tool_peek2(enc.data, j++);
+                r |= tic_tool_peek2(enc.data, j++);
+
+                png.data[i] = (a << 24) | (b << 16) | (g << 8) | (r << 0);
+            }
+        }
+
+        free(enc.data);
+
         png_buffer out = png_write(png);
         
         fs_write("out.png", out.data, (s32)out.size);
 
         free(out.data);
         free(png.data);
-        free(data);
+        free(file.data);
     }
+
+}
+
+static void decodeCart()
+{
+    png_buffer file;
+    file.data = fs_read("out.png", &file.size);
+
+    if (file.data)
+    {
+        png_img png = png_read(file);
+        s32 square = png.width * png.height;
+        png_buffer enc = { malloc(square), square };
+
+        for (s32 i = 0, j = 0; i < square; i++)
+        {
+            u32 c = png.data[i];
+
+            u8 a = (c & 0xff000000) >> 24;
+            u8 b = (c & 0x00ff0000) >> 16;
+            u8 g = (c & 0x0000ff00) >> 8;
+            u8 r = (c & 0x000000ff) >> 0;
+
+            enum { Shift = 2, Mask = (1 << Shift) - 1 };
+
+            tic_tool_poke2(enc.data, j++, a & Mask);
+            tic_tool_poke2(enc.data, j++, b & Mask);
+            tic_tool_poke2(enc.data, j++, g & Mask);
+            tic_tool_poke2(enc.data, j++, r & Mask);
+        }
+
+        {
+            png_buffer zip;
+            memcpy(&zip.size, enc.data, sizeof zip.size);
+
+            zip.data = malloc(zip.size);
+            memcpy(zip.data, enc.data + sizeof zip.size, zip.size);
+
+            u8* cart = malloc(sizeof(tic_cartridge));
+            u32 size = tic_tool_unzip(cart, sizeof(tic_cartridge), zip.data, zip.size);
+
+            fs_write("out.tic", cart, size);
+
+            free(cart);
+            free(zip.data);
+        }
+
+        free(enc.data);
+        free(png.data);
+        free(file.data);
+    }
+}
+
+Studio* studioInit(s32 argc, const char **argv, s32 samplerate, const char* folder)
+{
+    encodeCart();
+    decodeCart();
 
     setbuf(stdout, NULL);
 
