@@ -2071,34 +2071,15 @@ static void encodeCart()
                 free(zip.data);
                 free(cart);
             }
-        }
-        {
-            for (s32 i = 0, j = 0; i < png.width * png.height; i++)
-            {
-                if (i > enc.size) break;
+		}
 
-                u32 c = png.data[i];
+		{
+			enum { Shift = 2, Mask = (0xffffffff >> Shift) << Shift };
+			u8* b = png.data;
 
-                u8 a = (c & 0xff000000) >> 24;
-                u8 b = (c & 0x00ff0000) >> 16;
-                u8 g = (c & 0x0000ff00) >> 8;
-                u8 r = (c & 0x000000ff) >> 0;
-
-                enum {Shift = 2, Mask = (0xffffffff >> Shift) << Shift};
-
-                a &= Mask;
-                r &= Mask;
-                g &= Mask;
-                b &= Mask;
-
-                a |= tic_tool_peek2(enc.data, j++);
-                b |= tic_tool_peek2(enc.data, j++);
-                g |= tic_tool_peek2(enc.data, j++);
-                r |= tic_tool_peek2(enc.data, j++);
-
-                png.data[i] = (a << 24) | (b << 16) | (g << 8) | (r << 0);
-            }
-        }
+			for (s32 i = 0, end = enc.size * sizeof(u32); i < end; i++, b++)
+				*b = *b & Mask | tic_tool_peek2(enc.data, i);
+		}
 
         free(enc.data);
 
@@ -2124,21 +2105,12 @@ static void decodeCart()
         s32 square = png.width * png.height;
         png_buffer enc = { malloc(square), square };
 
-        for (s32 i = 0, j = 0; i < square; i++)
         {
-            u32 c = png.data[i];
-
-            u8 a = (c & 0xff000000) >> 24;
-            u8 b = (c & 0x00ff0000) >> 16;
-            u8 g = (c & 0x0000ff00) >> 8;
-            u8 r = (c & 0x000000ff) >> 0;
-
             enum { Shift = 2, Mask = (1 << Shift) - 1 };
+            u8* b = png.data;
 
-            tic_tool_poke2(enc.data, j++, a & Mask);
-            tic_tool_poke2(enc.data, j++, b & Mask);
-            tic_tool_poke2(enc.data, j++, g & Mask);
-            tic_tool_poke2(enc.data, j++, r & Mask);
+            for (s32 i = 0, end = square * sizeof(u32); i < end; i++)
+                tic_tool_poke2(enc.data, i, *b++ & Mask);
         }
 
         {
