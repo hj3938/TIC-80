@@ -2039,7 +2039,7 @@ static StartArgs parseArgs(s32 argc, const char **argv)
 
 #include "png.h"
 
-static void encodeCart()
+static void encodeCart(s32 shift)
 {
     png_buffer file;
     file.data = fs_read("cover.png", &file.size);
@@ -2074,8 +2074,8 @@ static void encodeCart()
 		}
 
 		{
-			enum { Shift = 2, Mask = (0xffffffff >> Shift) << Shift };
 			u8* b = png.data;
+            u32 Mask = (0xffffffff >> shift) << shift;
 
 			for (s32 i = 0, end = enc.size * sizeof(u32); i < end; i++, b++)
 				*b = *b & Mask | tic_tool_peek2(enc.data, i);
@@ -2094,7 +2094,7 @@ static void encodeCart()
 
 }
 
-static void decodeCart()
+static void decodeCart(s32 shift)
 {
     png_buffer file;
     file.data = fs_read("out.png", &file.size);
@@ -2106,7 +2106,8 @@ static void decodeCart()
         png_buffer enc = { malloc(square), square };
 
         {
-            enum { Shift = 2, Mask = (1 << Shift) - 1 };
+            u32 Mask = (1 << shift) - 1;
+
             u8* b = png.data;
 
             for (s32 i = 0, end = square * sizeof(u32); i < end; i++)
@@ -2137,8 +2138,11 @@ static void decodeCart()
 
 Studio* studioInit(s32 argc, const char **argv, s32 samplerate, const char* folder)
 {
-    encodeCart();
-    decodeCart();
+    {
+        s32 shift = 2;
+        encodeCart(shift);
+        decodeCart(shift);
+    }
 
     setbuf(stdout, NULL);
 

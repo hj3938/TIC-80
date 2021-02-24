@@ -34,7 +34,7 @@ typedef struct
 {
     s32 width;
     s32 height;
-    u32* data;
+    u8* data;
 } png_img;
 
 png_img png_read(png_buffer buf);

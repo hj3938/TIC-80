@@ -87,7 +87,7 @@ png_img png_read(png_buffer buf)
         png_bytep* rows = (png_bytep*)malloc(sizeof(png_bytep) * res.height);
 
         for (s32 i = 0; i < res.height; i++)
-            rows[i] = (png_bytep)(res.data + res.width * i);
+            rows[i] = res.data + res.width * i * sizeof(u32);
 
         png_read_image(png, rows);
 
@@ -103,7 +103,7 @@ static void pngWriteCallback(png_structp png, png_bytep data, png_size_t size)
 {
     PngStream* stream = png_get_io_ptr(png);
 
-    stream->buffer.size += size;
+    stream->buffer.size += (u32)size;
 
     stream->buffer.data = realloc(stream->buffer.data, stream->buffer.size);
     memcpy(stream->buffer.data + stream->pos, data, size);
@@ -136,7 +136,7 @@ png_buffer png_write(png_img src)
 
     png_bytep* rows = malloc(sizeof(png_bytep) * src.height);
     for (s32 i = 0; i < src.height; i++)
-        rows[i] = (png_bytep)(src.data + src.width * i);
+        rows[i] = src.data + src.width * i * sizeof(u32);
 
     png_write_image(png, rows);
     png_write_end(png, NULL);
