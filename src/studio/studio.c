@@ -2039,13 +2039,12 @@ static StartArgs parseArgs(s32 argc, const char **argv)
 
 #include "png.h"
 
-static void bitcpy(u8* dst, u32 to, const u8* src, u32 from, u32 size)
+static inline void bitcpy(u8* dst, u32 to, const u8* src, u32 from, u32 size)
 {
     for(s32 i = 0; i < size; i++, to++, from++)
-        if(src[from >> 3] & 1 << (from & 7))
-            dst[to >> 3] |= 1 << (to & 7);
-        else 
-            dst[to >> 3] &= ~(1 << (to & 7));
+        BIT_CHECK(src[from >> 3], from & 7) 
+            ? BIT_SET(dst[to >> 3], to & 7) 
+            : BIT_CLEAR(dst[to >> 3], to & 7);
 }
 
 static png_buffer encodeCart(s32 bits, png_buffer cart)
