@@ -498,21 +498,6 @@ target_include_directories(zlib INTERFACE ${DEVKITPRO}/portlibs/3ds/include)
 endif ()
 
 ################################
-# LIBPNG
-################################
-
-set(PNG_SHARED OFF CACHE BOOL "" FORCE)
-set(PNG_STATIC ON CACHE BOOL "" FORCE)
-set(PNG_EXECUTABLES OFF CACHE BOOL "" FORCE)
-set(PNG_TESTS OFF CACHE BOOL "" FORCE)
-set(PNG_BUILD_ZLIB ON CACHE BOOL "" FORCE)
-set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
-add_subdirectory(${THIRDPARTY_DIR}/libpng)
-
-target_include_directories(png_static 
-    INTERFACE ${THIRDPARTY_DIR}/libpng ${CMAKE_CURRENT_BINARY_DIR}/vendor/libpng)
-
-################################
 # ZIP
 ################################
 
@@ -630,12 +615,31 @@ endif()
 # PNG
 ################################
 
-add_library(png STATIC ${CMAKE_SOURCE_DIR}/src/ext/png.c)
-target_include_directories(png 
-    PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src
-    INTERFACE ${CMAKE_SOURCE_DIR}/src/ext)
+set(LIBPNG_DIR ${THIRDPARTY_DIR}/libpng)
+set(LIBPNG_SRC 
+    ${LIBPNG_DIR}/png.c
+    ${LIBPNG_DIR}/pngerror.c
+    ${LIBPNG_DIR}/pngget.c
+    ${LIBPNG_DIR}/pngmem.c
+    ${LIBPNG_DIR}/pngpread.c
+    ${LIBPNG_DIR}/pngread.c
+    ${LIBPNG_DIR}/pngrio.c
+    ${LIBPNG_DIR}/pngrtran.c
+    ${LIBPNG_DIR}/pngrutil.c
+    ${LIBPNG_DIR}/pngset.c
+    ${LIBPNG_DIR}/pngtrans.c
+    ${LIBPNG_DIR}/pngwio.c
+    ${LIBPNG_DIR}/pngwrite.c
+    ${LIBPNG_DIR}/pngwtran.c
+    ${LIBPNG_DIR}/pngwutil.c
+)
 
-target_link_libraries(png png_static)
+configure_file(${LIBPNG_DIR}/scripts/pnglibconf.h.prebuilt ${LIBPNG_DIR}/pnglibconf.h)
+
+add_library(png STATIC ${LIBPNG_SRC})
+target_include_directories(png 
+    PRIVATE ${THIRDPARTY_DIR}/zlib
+    INTERFACE ${THIRDPARTY_DIR}/libpng)
 
 ################################
 # TIC-80 studio
@@ -662,6 +666,7 @@ set(TIC80STUDIO_SRC
     ${TIC80LIB_DIR}/studio/net.c
     ${TIC80LIB_DIR}/ext/md5.c
     ${TIC80LIB_DIR}/ext/history.c
+    ${TIC80LIB_DIR}/ext/png.c
 )
 
 set(TIC80_OUTPUT tic80)
