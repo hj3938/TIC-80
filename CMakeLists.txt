@@ -632,7 +632,7 @@ endif()
 
 add_library(png STATIC ${CMAKE_SOURCE_DIR}/src/ext/png.c)
 target_include_directories(png 
-    PRIVATE ${CMAKE_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src
     INTERFACE ${CMAKE_SOURCE_DIR}/src/ext)
 
 target_link_libraries(png png_static)

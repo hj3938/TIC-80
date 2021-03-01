@@ -21,10 +21,13 @@
 // SOFTWARE.
 
 #include "png.h"
+#include "defines.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <png.h>
+
+#define RGBA_SIZE sizeof(u32)
 
 typedef struct
 {
@@ -83,11 +86,11 @@ png_img png_read(png_buffer buf)
 
         png_read_update_info(png, info);
 
-        res.data = malloc(sizeof(u32) * res.width * res.height);
+        res.data = malloc(RGBA_SIZE * res.width * res.height);
         png_bytep* rows = (png_bytep*)malloc(sizeof(png_bytep) * res.height);
 
         for (s32 i = 0; i < res.height; i++)
-            rows[i] = res.data + res.width * i * sizeof(u32);
+            rows[i] = res.data + res.width * i * RGBA_SIZE;
 
         png_read_image(png, rows);
 
@@ -136,7 +139,7 @@ png_buffer png_write(png_img src)
 
     png_bytep* rows = malloc(sizeof(png_bytep) * src.height);
     for (s32 i = 0; i < src.height; i++)
-        rows[i] = src.data + src.width * i * sizeof(u32);
+        rows[i] = src.data + src.width * i * RGBA_SIZE;
 
     png_write_image(png, rows);
     png_write_end(png, NULL);
@@ -146,4 +149,72 @@ png_buffer png_write(png_img src)
     free(rows);
 
     return stream.buffer;
+}
+
+typedef union
+{
+    struct
+    {
+        u32 bits:8;
+        u32 size:24;
+    };
+
+    u8 data[RGBA_SIZE];
+} Header;
+
+STATIC_ASSERT(header_size, sizeof(Header) == RGBA_SIZE);
+
+#define BITS_IN_BYTE 8
+#define HEADER_BITS 4
+#define HEADER_SIZE (sizeof(Header) * BITS_IN_BYTE / HEADER_BITS)
+
+static inline void bitcpy(u8* dst, u32 to, const u8* src, u32 from, u32 size)
+{
+    for(s32 i = 0; i < size; i++, to++, from++)
+        BIT_CHECK(src[from >> 3], from & 7) 
+            ? BIT_SET(dst[to >> 3], to & 7) 
+            : BIT_CLEAR(dst[to >> 3], to & 7);
+}
+
+static inline u32 ceilBufSize(u32 size, u32 bits)
+{
+    return (size * BITS_IN_BYTE + bits - 1) / bits;
+}
+
+png_buffer png_encode(png_buffer cover, png_buffer cart)
+{    
+    png_img png = png_read(cover);
+
+    Header header = {cart.size * BITS_IN_BYTE / (png.width * png.height * RGBA_SIZE - HEADER_SIZE), cart.size};
+
+    for (s32 i = 0; i < HEADER_SIZE; i++)
+        bitcpy(png.data, i << 3, header.data, i * HEADER_BITS, HEADER_BITS);
+
+    for (s32 i = 0, end = ceilBufSize(cart.size, header.bits); i < end; i++)
+        bitcpy(png.data + HEADER_SIZE, i << 3, cart.data, i * header.bits, header.bits);
+
+    png_buffer out = png_write(png);
+
+    free(png.data);
+
+    return out;
+}
+
+png_buffer png_decode(png_buffer cover)
+{
+    png_img png = png_read(cover);
+
+    Header header;
+
+    for (s32 i = 0; i < HEADER_SIZE; i++)
+        bitcpy(header.data, i * HEADER_BITS, png.data, i << 3, HEADER_BITS);
+
+    png_buffer out = { malloc(header.size), header.size };
+
+    for (s32 i = 0, end = ceilBufSize(header.size, header.bits); i < end; i++)
+        bitcpy(out.data, i * header.bits, png.data + HEADER_SIZE, i << 3, header.bits);
+
+    free(png.data);
+
+    return out;
 }

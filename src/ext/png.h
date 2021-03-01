@@ -39,3 +39,6 @@ typedef struct
 
 png_img png_read(png_buffer buf);
 png_buffer png_write(png_img src);
+
+png_buffer png_encode(png_buffer cover, png_buffer cart);
+png_buffer png_decode(png_buffer cover);
