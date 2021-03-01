@@ -2047,6 +2047,29 @@ static inline void bitcpy(u8* dst, u32 to, const u8* src, u32 from, u32 size)
             : BIT_CLEAR(dst[to >> 3], to & 7);
 }
 
+#define RGBA_SIZE sizeof(u32)
+
+typedef union
+{
+    struct
+    {
+        u32 bits:8;
+        u32 size:24;
+    };
+
+    u8 data[RGBA_SIZE];
+} Header;
+
+STATIC_ASSERT(header_size, sizeof(Header) == RGBA_SIZE);
+
+#define HEADER_BITS 4
+#define HEADER_SIZE (sizeof(Header) * BITS_IN_BYTE / HEADER_BITS)
+
+static inline u32 ceilBufSize(u32 size, u32 bits)
+{
+    return (size * BITS_IN_BYTE + bits - 1) / bits;
+}
+
 static png_buffer encodeCart(s32 bits, png_buffer cart)
 {
     static u8 Cover[] =
@@ -2057,20 +2080,13 @@ static png_buffer encodeCart(s32 bits, png_buffer cart)
     png_buffer file = { Cover, sizeof Cover };
     png_img png = png_read(file);
 
-    png_buffer enc;
-    {
-        // encode size
-        enum {Size = sizeof cart.size};
-        enc.size = cart.size + Size;
-        enc.data = malloc(enc.size);
-        memcpy(enc.data, &cart.size, Size);
-        memcpy(enc.data + Size, cart.data, cart.size);
-    }
+    Header header = {bits, cart.size};
 
-    for (s32 i = 0, end = (enc.size * 8 + bits - 1) / bits; i < end; i++)
-        bitcpy(png.data, i << 3, enc.data, i * bits, bits);
+    for (s32 i = 0; i < HEADER_SIZE; i++)
+        bitcpy(png.data, i << 3, header.data, i * HEADER_BITS, HEADER_BITS);
 
-    free(enc.data);
+    for (s32 i = 0, end = ceilBufSize(cart.size, bits); i < end; i++)
+        bitcpy(png.data + HEADER_SIZE, i << 3, cart.data, i * bits, bits);
 
     png_buffer out = png_write(png);
     free(png.data);
@@ -2078,27 +2094,20 @@ static png_buffer encodeCart(s32 bits, png_buffer cart)
     return out;
 }
 
-static png_buffer decodeCart(s32 bits, png_buffer file)
+static png_buffer decodeCart(png_buffer file)
 {
     png_img png = png_read(file);
-    s32 pngSize = png.width * png.height * sizeof(u32);
-    s32 encSize = pngSize * bits / 8;
-    png_buffer enc = { malloc(encSize), encSize };
 
-    for (s32 i = 0; i < pngSize; i++)
-        bitcpy(enc.data, i * bits, png.data, i << 3, bits);
+    Header header;
 
-    png_buffer out;
+    for (s32 i = 0; i < HEADER_SIZE; i++)
+        bitcpy(header.data, i * HEADER_BITS, png.data, i << 3, HEADER_BITS);
 
-    memcpy(&out.size, enc.data, sizeof out.size);
+    png_buffer out = { malloc(header.size), header.size };
 
-    if(out.size)
-    {
-        out.data = malloc(out.size);
-        memcpy(out.data, enc.data + sizeof out.size, out.size);
-    }
+    for (s32 i = 0, end = ceilBufSize(header.size, header.bits); i < end; i++)
+        bitcpy(out.data, i * header.bits, png.data + HEADER_SIZE, i << 3, header.bits);
 
-    free(enc.data);
     free(png.data);
 
     return out;
@@ -2106,9 +2115,9 @@ static png_buffer decodeCart(s32 bits, png_buffer file)
 
 Studio* studioInit(s32 argc, const char **argv, s32 samplerate, const char* folder)
 {
-    for(s32 bits = 1; bits <= 8; bits++)
+    for(s32 bits = 1; bits <= BITS_IN_BYTE; bits++)
     {
-        s32 size = (256 * 256 * bits - 8) * sizeof(u32) / 8;
+        s32 size = (256 * 256 * RGBA_SIZE - HEADER_SIZE) * bits / BITS_IN_BYTE;
 
         png_buffer buf = {malloc(size), size };
 
@@ -2118,11 +2127,11 @@ Studio* studioInit(s32 argc, const char **argv, s32 samplerate, const char* fold
         png_buffer img = encodeCart(bits, buf);
 
         {
-            png_buffer out = decodeCart(bits, img);
+            png_buffer out = decodeCart(img);
 
             if (out.size == buf.size && memcmp(out.data, buf.data, buf.size) == 0)
                 printf("bits %i - OK, size %i\n", bits, size);
-            else printf("bits %i - ERROR\n", bits);
+            else printf("bits %i - ERROR, size %i\n", bits, size);
 
             free(out.data);
         }
