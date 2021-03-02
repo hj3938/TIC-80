@@ -637,6 +637,9 @@ set(LIBPNG_SRC
 configure_file(${LIBPNG_DIR}/scripts/pnglibconf.h.prebuilt ${LIBPNG_DIR}/pnglibconf.h)
 
 add_library(png STATIC ${LIBPNG_SRC})
+
+target_compile_definitions(png PRIVATE PNG_ARM_NEON_OPT=0)
+
 target_include_directories(png 
     PRIVATE ${THIRDPARTY_DIR}/zlib
     INTERFACE ${THIRDPARTY_DIR}/libpng)

@@ -2049,7 +2049,7 @@ Studio* studioInit(s32 argc, const char **argv, s32 samplerate, const char* fold
 
         png_buffer file = { Cover, sizeof Cover };
 
-        s32 size = (256 * 256 * 4 - 8) * 2 / BITS_IN_BYTE;
+        s32 size = 123;
         png_buffer buf = {malloc(size), size };
 
         for (s32 i = 0; i < size; i++)

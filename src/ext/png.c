@@ -185,7 +185,7 @@ png_buffer png_encode(png_buffer cover, png_buffer cart)
 {    
     png_img png = png_read(cover);
 
-    Header header = {cart.size * BITS_IN_BYTE / (png.width * png.height * RGBA_SIZE - HEADER_SIZE), cart.size};
+    Header header = {CLAMP(cart.size * BITS_IN_BYTE / (png.width * png.height * RGBA_SIZE - HEADER_SIZE), 1, 8), cart.size};
 
     for (s32 i = 0; i < HEADER_SIZE; i++)
         bitcpy(png.data, i << 3, header.data, i * HEADER_BITS, HEADER_BITS);
